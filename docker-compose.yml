@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: opsmind
+      POSTGRES_PASSWORD: opsmind
+      POSTGRES_DB: opsmind
+    ports:
+      - '5432:5432'
+    volumes:
+      - opsmind-db:/var/lib/postgresql/data
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://opsmind:opsmind@db:5432/opsmind
+      CORS_ALLOW_ORIGINS: http://localhost:3000
+      DEV_AUTH_BYPASS: 'true'
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+volumes:
+  opsmind-db:
