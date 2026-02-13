@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 import time
 import requests
 from jose import jwt

@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ReactNode } from 'react'
 import Providers from './providers'
 
@@ -19,9 +20,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <p className="text-sm text-slate-400">RCA-first AIOps control plane</p>
             </div>
             <nav className="flex gap-4 text-sm text-slate-300">
-              <a href="/opsmind/incidents" className="hover:text-white">Incidents</a>
-              <a href="/opsmind/assistant" className="hover:text-white">Assistant</a>
-              <a href="/opsmind/knowledge" className="hover:text-white">Knowledge</a>
+              <Link href="/opsmind/incidents" className="hover:text-white">Incidents</Link>
+              <Link href="/opsmind/assistant" className="hover:text-white">Assistant</Link>
+              <Link href="/opsmind/knowledge" className="hover:text-white">Knowledge</Link>
             </nav>
           </header>
           <Providers>{children}</Providers>
