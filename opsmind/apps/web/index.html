@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>OpsMind</title>
+  <style>body{font-family:Arial;max-width:900px;margin:20px auto}.msg{padding:8px;border-bottom:1px solid #ddd}textarea{width:100%}</style>
+</head>
+<body>
+  <h2>OpsMind Chat</h2>
+  <label>Org <input id="org" value="local-org"></label>
+  <label>Project <input id="project" value="local-project"></label>
+  <div id="conversation"></div>
+  <textarea id="message" rows="3" placeholder="Describe incident..."></textarea>
+  <button onclick="send()">Send</button>
+<script>
+let conversationId = null;
+const container = document.getElementById('conversation');
+function render(text){const d=document.createElement('div');d.className='msg';d.innerHTML=text;container.appendChild(d)}
+async function send(){
+  const payload={message:document.getElementById('message').value,conversation_id:conversationId,org_id:org.value,project_id:project.value};
+  render('<b>You:</b> '+payload.message);
+  const r=await fetch('/v1/chat/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await r.json(); conversationId=data.conversation_id;
+  const resp=data.response;
+  let html=`<b>Assistant:</b> ${resp.primary_text}<br/><i>Status:</i> ${resp.status}`;
+  if(resp.hypotheses?.length){html+='<ul>'+resp.hypotheses.map(h=>`<li>${h.statement} (${Math.round(h.confidence*100)}%)</li>`).join('')+'</ul>'}
+  if(resp.evidence?.length){html+='<b>Evidence</b><ul>'+resp.evidence.map(e=>`<li>${e.ref_type}: ${e.description}</li>`).join('')+'</ul>'}
+  if(resp.next_actions?.length){html+='<b>Next Actions</b><ul>'+resp.next_actions.map(n=>`<li>${n}</li>`).join('')+'</ul>'}
+  if(resp.followup_questions?.length){html+='<b>Follow-up</b><ul>'+resp.followup_questions.map(q=>`<li>${q}</li>`).join('')+'</ul>'}
+  render(html);
+}
+</script>
+</body>
+</html>
