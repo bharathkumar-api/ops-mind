@@ -30,7 +30,11 @@ from app.routers.opsmind import (
 
 settings = get_settings()
 
-app = FastAPI(title="OpsMind API")
+app = FastAPI(
+    title="OpsMind API",
+    description="Enterprise-safe AIOps platform API",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,17 +48,17 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
-    # Allow Swagger UI resources for /docs and /redoc endpoints
-    # Swagger UI needs inline styles and scripts to function
-    if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
-        response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
-    else:
+    # Skip security headers for Swagger UI endpoints to allow them to function properly
+    path = request.url.path
+    is_docs_endpoint = path.startswith("/docs") or path.startswith("/redoc") or path == "/openapi.json"
+    
+    if not is_docs_endpoint:
         response.headers["Content-Security-Policy"] = "default-src 'self'"
-    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=()"
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=()"
     return response
 
 
@@ -89,3 +93,13 @@ app.include_router(risk.router)
 app.include_router(simulate.router)
 app.include_router(learn.router)
 app.include_router(insight.router)
+
+
+@app.get("/")
+def root():
+    return {
+        "message": "OpsMind API",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "openapi": "/openapi.json"
+    }
