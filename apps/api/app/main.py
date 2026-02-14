@@ -44,7 +44,12 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    # Allow Swagger UI resources for /docs and /redoc endpoints
+    # Swagger UI needs inline styles and scripts to function
+    if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+        response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
