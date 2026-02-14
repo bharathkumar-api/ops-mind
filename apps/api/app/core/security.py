@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 import time
+import io
 import requests
 from jose import jwt
 from jose.exceptions import JWTError
@@ -106,7 +107,9 @@ def _build_enforcer(session: Session, org_id: UUID) -> casbin.Enforcer:
         if role:
             policies.append(["g", str(user_role.user_id), role.name, str(org_id)])
     adapter = MemoryAdapter(policies)
-    enforcer = casbin.Enforcer(model_text=_model_text, adapter=adapter)
+    # Create a file-like object from the model string for Casbin to read
+    model_stream = io.StringIO(_model_text)
+    enforcer = casbin.Enforcer(model_stream, adapter)
     enforcer.load_policy()
     return enforcer
 
