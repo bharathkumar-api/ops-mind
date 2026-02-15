@@ -6,6 +6,7 @@ from app.routers.opsmind import (
     admin,
     approvals,
     assistant,
+    chat,
     changeiq,
     correlate,
     detect,
@@ -48,6 +49,7 @@ def register_routers(app) -> None:
         simulate.router,
         learn.router,
         insight.router,
+        chat.router,
     ]
     
     for router in routers:

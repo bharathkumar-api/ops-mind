@@ -149,3 +149,102 @@ class RedisPostgresStore(ConversationStateStore, TranscriptStore, ToolResultStor
         if not row:
             return None
         return ToolResult.model_validate(row[0])
+
+
+class PostgresStore(ConversationStateStore, TranscriptStore, ToolResultStore):
+    """Postgres-only store: stores conversation state, transcripts and tool results in Postgres.
+
+    This is used when Redis is not available and the user provides only a DATABASE_URL.
+    """
+    def __init__(self, postgres_dsn: str) -> None:
+        self.pg_dsn = postgres_dsn
+        self._init_tables()
+
+    def _init_tables(self) -> None:
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS states (
+                      conversation_id TEXT PRIMARY KEY,
+                      state_json JSONB NOT NULL,
+                      updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE TABLE IF NOT EXISTS transcripts (
+                      id SERIAL PRIMARY KEY,
+                      conversation_id TEXT NOT NULL,
+                      message_json JSONB NOT NULL,
+                      created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE TABLE IF NOT EXISTS tool_results (
+                      ref TEXT PRIMARY KEY,
+                      conversation_id TEXT NOT NULL,
+                      result_json JSONB NOT NULL,
+                      created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    """
+                )
+            conn.commit()
+
+    def get(self, conversation_id: str) -> ConversationState | None:
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT state_json FROM states WHERE conversation_id=%s", (conversation_id,))
+                row = cur.fetchone()
+        if not row:
+            return None
+        return ConversationState.model_validate(row[0])
+
+    def create(self, initial_state: ConversationState) -> ConversationState:
+        self.save(initial_state)
+        return initial_state
+
+    def save(self, state: ConversationState) -> None:
+        state.updated_at = datetime.utcnow()
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO states (conversation_id, state_json, updated_at) VALUES (%s, %s, %s)"
+                    " ON CONFLICT (conversation_id) DO UPDATE SET state_json=EXCLUDED.state_json, updated_at=EXCLUDED.updated_at",
+                    (state.conversation_id, json.dumps(state.model_dump(mode="json")), state.updated_at),
+                )
+            conn.commit()
+
+    def append_message(self, conversation_id: str, message: Message) -> None:
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO transcripts (conversation_id, message_json) VALUES (%s, %s)",
+                    (conversation_id, json.dumps(message.model_dump(mode="json"))),
+                )
+            conn.commit()
+
+    def list_messages(self, conversation_id: str, limit: int, offset: int) -> list[Message]:
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT message_json FROM transcripts WHERE conversation_id=%s ORDER BY id LIMIT %s OFFSET %s",
+                    (conversation_id, limit, offset),
+                )
+                rows = cur.fetchall()
+        return [Message.model_validate(r[0]) for r in rows]
+
+    def store_tool_result(self, conversation_id: str, tool_result: ToolResult) -> str:
+        ref = f"{conversation_id}:{tool_result.tool_call_id}"
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO tool_results (ref, conversation_id, result_json) VALUES (%s, %s, %s) ON CONFLICT (ref) DO UPDATE SET result_json=EXCLUDED.result_json",
+                    (ref, conversation_id, json.dumps(tool_result.model_dump(mode="json"))),
+                )
+            conn.commit()
+        return ref
+
+    def get_tool_result(self, ref: str) -> ToolResult | None:
+        with psycopg.connect(self.pg_dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT result_json FROM tool_results WHERE ref=%s", (ref,))
+                row = cur.fetchone()
+        if not row:
+            return None
+        return ToolResult.model_validate(row[0])
