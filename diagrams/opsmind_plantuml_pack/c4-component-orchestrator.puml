@@ -5,7 +5,7 @@
 LAYOUT_LEFT_RIGHT()
 title OpsMind — Orchestrator Component Diagram (Developer-level)
 
-Container_Boundary(orchestrator, "Orchestrator Service") {
+Container_Boundary(orchestrator, "Orchestrator Service ") {
 
   Component(turnHandler, "Turn Handler", "OrchestratorTurnService", "Entry point per user message. Loads state, routes scenario, plans tools, updates state, returns ResponseModel.")
 
