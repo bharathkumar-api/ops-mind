@@ -7,7 +7,14 @@ OpsMind is an enterprise-grade AIOps platform that detects incidents, reasons ab
 apps/web  # Next.js frontend
 apps/api  # FastAPI backend
 packages  # Shared packages
+archive/legacy-opsmind # Archived legacy prototype monorepo (not used by current app)
 ```
+
+## Repository Cleanup Notes
+
+This repository previously included a second nested monorepo at `opsmind/` that duplicated
+`apps/` and `packages/` concepts. To make the project layout clearer, that legacy code has
+been moved to `archive/legacy-opsmind/`.
 
 ## Local Development
 1. Copy `.env.example` to `.env` and adjust if needed.
