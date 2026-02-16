@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 import time
-import io
 import requests
 from jose import jwt
 from jose.exceptions import JWTError
