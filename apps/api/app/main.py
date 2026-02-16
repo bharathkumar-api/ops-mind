@@ -1,11 +1,15 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
+import logging
+import os
+import sys
+import time
+from pathlib import Path
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.middleware import security_headers_middleware
 from app.core.startup import init_application
-import sys
-from pathlib import Path
+from app.routers import register_routers
 
 # Make local opsmind packages importable for orchestrator wiring
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,8 +23,6 @@ sys.path.extend(
         str(ROOT / "opsmind" / "packages" / "common"),
     ]
 )
-
-from app.routers import register_routers
 
 settings = get_settings()
 
@@ -54,12 +56,6 @@ register_routers(app)
 
 
 # --- OpsMind orchestrator compatibility (chat endpoints) ---
-from pathlib import Path
-import os
-import sys
-import time
-import logging
-from fastapi import Header, HTTPException
 
 ROOT = Path(__file__).resolve().parents[3]
 # Ensure opsmind packages are importable when running this app in this repo layout
@@ -143,18 +139,6 @@ if ChatSendRequest is not None:
 
 
 """OpsMind API main application."""
-import os
-import sys
-import time
-import logging
-from pathlib import Path
-from fastapi import FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
-from app.core.config import get_settings
-from app.core.middleware import security_headers_middleware
-from app.core.startup import init_application
-from app.routers import register_routers
 
 # Make local opsmind packages importable for orchestrator wiring
 ROOT = Path(__file__).resolve().parents[3]
