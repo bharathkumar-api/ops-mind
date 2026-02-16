@@ -33,14 +33,14 @@ settings = get_settings()
 app = FastAPI(
     title="OpsMind API",
     description="Enterprise-safe AIOps platform API",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
-    allow_methods=["*"] ,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -48,17 +48,30 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
-    # Skip security headers for Swagger UI endpoints to allow them to function properly
+
+    # Keep docs usable while preserving security hardening elsewhere.
     path = request.url.path
-    is_docs_endpoint = path.startswith("/docs") or path.startswith("/redoc") or path == "/openapi.json"
-    
-    if not is_docs_endpoint:
+    is_docs_endpoint = (
+        path.startswith("/docs")
+        or path.startswith("/redoc")
+        or path == "/openapi.json"
+    )
+
+    if is_docs_endpoint:
+        response.headers[
+            "Content-Security-Policy"
+        ] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'"
+    else:
         response.headers["Content-Security-Policy"] = "default-src 'self'"
-        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=()"
+
+    response.headers[
+        "Strict-Transport-Security"
+    ] = "max-age=63072000; includeSubDomains; preload"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=()"
+
     return response
 
 
@@ -101,5 +114,5 @@ def root():
         "message": "OpsMind API",
         "docs": "/docs",
         "redoc": "/redoc",
-        "openapi": "/openapi.json"
+        "openapi": "/openapi.json",
     }
