@@ -45,11 +45,7 @@ app.add_middleware(
 # Add security headers middleware
 app.middleware("http")(security_headers_middleware)
 
-# Initialize application on startup
-@app.on_event("startup")
-def on_startup():
-    """Initialize database and seed data on application startup."""
-    init_application()
+
 
 # Register all routers
 register_routers(app)
