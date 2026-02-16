@@ -1,0 +1,70 @@
+flowchart TB
+
+%% ============ USER LAYER ============
+User[User - SRE / Engineer]
+
+%% ============ PRESENTATION ============
+subgraph Presentation Layer
+    WebUI[OpsMind Web Portal (Chat UI)]
+end
+
+%% ============ API ============
+subgraph API Layer
+    APIGW[FastAPI Chat API]
+end
+
+%% ============ ORCHESTRATION ============
+subgraph Orchestration Layer
+    Orchestrator[Orchestrator Engine<br/>Deterministic Workflow + Tool Planner]
+    Presenter[Presenter / Response Builder]
+    ScenarioRouter[Scenario Classifier]
+end
+
+%% ============ TOOLING ============
+subgraph Tooling Layer
+    ToolRegistry[Tool Registry]
+    LogsAdapter[Logs Adapter]
+    MetricsAdapter[Metrics Adapter]
+    TracesAdapter[Traces Adapter]
+    DeployAdapter[Deploy Adapter]
+    ConfigAdapter[Config Adapter]
+end
+
+%% ============ STORAGE ============
+subgraph State & Storage
+    Redis[(Redis - Hot State)]
+    Postgres[(Postgres - Durable Store)]
+    ObjectStore[(Object Store - Artifacts)]
+end
+
+%% ============ MODEL ============
+subgraph Model Layer
+    ModelProvider[Model Provider Interface<br/>(Mock / Vertex / Bedrock / OpenAI)]
+end
+
+%% ============ FLOW ============
+User --> WebUI
+WebUI --> APIGW
+APIGW --> Orchestrator
+
+Orchestrator --> ScenarioRouter
+Orchestrator --> ToolRegistry
+Orchestrator --> Presenter
+Orchestrator --> Redis
+Orchestrator --> Postgres
+
+ToolRegistry --> LogsAdapter
+ToolRegistry --> MetricsAdapter
+ToolRegistry --> TracesAdapter
+ToolRegistry --> DeployAdapter
+ToolRegistry --> ConfigAdapter
+
+LogsAdapter --> ObjectStore
+MetricsAdapter --> ObjectStore
+TracesAdapter --> ObjectStore
+
+Orchestrator --> ModelProvider
+
+Presenter --> APIGW
+APIGW --> WebUI
+WebUI --> User

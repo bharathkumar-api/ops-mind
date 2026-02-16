@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   db:
     image: postgres:15
@@ -10,6 +9,11 @@ services:
       - '5432:5432'
     volumes:
       - opsmind-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opsmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   api:
     build:
       context: ./apps/api
@@ -21,7 +25,8 @@ services:
     ports:
       - '8000:8000'
     depends_on:
-      - db
+      db:
+        condition: service_healthy
   web:
     build:
       context: ./apps/web

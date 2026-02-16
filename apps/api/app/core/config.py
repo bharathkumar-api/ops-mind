@@ -4,7 +4,7 @@ import os
 
 
 class Settings(BaseModel):
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://opsmind:opsmind@db:5432/opsmind")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://opsmind:opsmind@localhost:5432/opsmind")
     jwks_url: str = os.getenv("JWKS_URL", "")
     jwt_issuer: str = os.getenv("JWT_ISSUER", "")
     jwt_audience: str = os.getenv("JWT_AUDIENCE", "")
