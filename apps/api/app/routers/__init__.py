@@ -1,5 +1,4 @@
 """Router registry for all OpsMind API endpoints."""
-from fastapi import APIRouter
 
 from app.routers.opsmind import (
     actions,
