@@ -1,0 +1,76 @@
+@startuml
+title OpsMind — Security Boundaries (Dev-focused)
+
+skinparam componentStyle rectangle
+
+actor "User" as U
+rectangle "Trust Boundary: Browser" as TB_BROWSER {
+  [Web Portal]
+}
+
+rectangle "Trust Boundary: API Perimeter" as TB_API {
+  [Chat API]
+  [AuthN (OIDC/JWT)]
+  [Input Validation (Pydantic)]
+  [Rate Limiter]
+}
+
+rectangle "Trust Boundary: Core Compute" as TB_CORE {
+  [Orchestrator]
+  [Policy Engine (RBAC/ABAC)]
+  [Tool Registry]
+}
+
+rectangle "Trust Boundary: Data Layer" as TB_DATA {
+  database "Redis" as R
+  database "Postgres" as P
+  database "Object Store" as O
+}
+
+rectangle "Trust Boundary: External Systems" as TB_EXT {
+  [Logs Platform]
+  [Metrics Platform]
+  [Traces Platform]
+  [Deploy/Change System]
+  [Config/Flags System]
+  [LLM Provider]
+}
+
+U --> [Web Portal] : HTTPS
+[Web Portal] --> [Chat API] : HTTPS/JSON
+
+[Chat API] --> [AuthN (OIDC/JWT)]
+[Chat API] --> [Input Validation (Pydantic)]
+[Chat API] --> [Rate Limiter]
+[Chat API] --> [Orchestrator] : internal call\n(HTTP or in-proc)
+
+[Orchestrator] --> [Policy Engine (RBAC/ABAC)] : authorize(tool, resource, subject)
+[Policy Engine (RBAC/ABAC)] --> [Tool Registry] : allow/deny decisions
+
+[Orchestrator] --> R : read/write hot state\n(TLS)
+[Orchestrator] --> P : transcript + tool ledger\n(TLS)
+[Tool Registry] --> O : store raw outputs/artifacts\n(TLS)
+
+[Tool Registry] --> [Logs Platform] : scoped queries\n(service/env/project)\n(TLS)
+[Tool Registry] --> [Metrics Platform] : scoped queries\n(TLS)
+[Tool Registry] --> [Traces Platform] : scoped queries\n(TLS)
+[Tool Registry] --> [Deploy/Change System] : change events\n(TLS)
+[Tool Registry] --> [Config/Flags System] : config diffs\n(TLS)
+
+[Orchestrator] --> [LLM Provider] : generate(classify/summarize)\n(TLS)\nNO secrets in prompts
+
+note right of [Policy Engine (RBAC/ABAC)]
+- Enforce least privilege per tool
+- Tenant isolation by org/project
+- Record AuthzDecision in audit trail
+end note
+
+note bottom of TB_CORE
+Guardrails:
+- max tool calls/turn
+- max runtime/turn (sync; else async)
+- evidence-first (no uncited claims)
+- redact/limit raw outputs
+end note
+
+@enduml

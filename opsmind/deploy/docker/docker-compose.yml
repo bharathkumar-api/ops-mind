@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    environment:
+      OPSMIND_STORE: redis_postgres
+      REDIS_URL: redis://redis:6379/0
+      POSTGRES_DSN: postgresql://opsmind:opsmind@postgres:5432/opsmind
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - postgres
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: opsmind
+      POSTGRES_PASSWORD: opsmind
+      POSTGRES_DB: opsmind
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

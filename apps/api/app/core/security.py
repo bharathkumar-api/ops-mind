@@ -106,7 +106,10 @@ def _build_enforcer(session: Session, org_id: UUID) -> casbin.Enforcer:
         if role:
             policies.append(["g", str(user_role.user_id), role.name, str(org_id)])
     adapter = MemoryAdapter(policies)
-    enforcer = casbin.Enforcer(model_text=_model_text, adapter=adapter)
+    # Build a Casbin model from the model text and create the enforcer
+    model = casbin.model.Model()
+    model.load_model_from_text(_model_text)
+    enforcer = casbin.Enforcer(model, adapter)
     enforcer.load_policy()
     return enforcer
 

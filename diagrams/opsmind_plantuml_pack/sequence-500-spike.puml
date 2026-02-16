@@ -1,0 +1,88 @@
+@startuml
+title OpsMind — Sequence Diagram: HTTP 500 Spike (Single Turn)
+
+actor User as U
+participant "Web Portal" as Web
+participant "Chat API (FastAPI)" as API
+participant "Orchestrator" as ORCH
+database "Redis (hot state)" as R
+database "Postgres (durable)" as P
+participant "Scenario Router" as Router
+participant "Workflow Engine" as WF
+participant "Tool Planner" as Plan
+participant "Tool Registry" as Tools
+participant "Logs Adapter" as Logs
+participant "Deploy Adapter" as Dep
+participant "Traces Adapter" as Tr
+participant "Metrics Adapter" as Met
+participant "Presenter" as Pres
+
+== Send message ==
+U -> Web: "500 spike since 12:05 in payments-api"
+Web -> API: POST /v1/chat/send\n(conversation_id, org/project, message, overrides?)
+
+API -> ORCH: orchestrate_turn(message, conversation_id, auth_context)
+
+== Load state ==
+ORCH -> R: get(conversation_id)\n(summary, slots, workflow state)
+alt cache miss
+  ORCH -> P: load transcript + last state snapshot
+end
+ORCH -> P: append user message (durable transcript)
+
+== Classify + validate slots ==
+ORCH -> Router: classify(message, slots)
+Router --> ORCH: scenario = HTTP_500_SPIKE
+ORCH -> ORCH: compute missing slots\n(service/env/time_window/...)
+alt missing required slots
+  ORCH -> Pres: build needs_info response\n(follow-up questions)
+  Pres --> ORCH: ResponseModel(needs_info)
+  ORCH -> R: save hot state (missing_slots)
+  ORCH -> API: return response
+  API -> Web: render follow-ups
+  return
+end
+
+== Deterministic tool plan ==
+ORCH -> WF: advance(scope→plan)\nScenarioWorkflowSpec(HTTP_500_SPIKE)
+WF -> Plan: build tool plan\n(max_calls=4, max_runtime=15s)
+Plan --> WF: [logs_breakdown, changes_near_window, sample_failures, correlate_error_rate]
+WF -> Tools: execute(plan)
+
+== Tool execution (audited) ==
+Tools -> P: record ToolCall(tc1=logs_breakdown)
+Tools -> Logs: query_error_breakdown(service, env, window)
+Logs --> Tools: ToolResult(tc1 summary + artifacts)
+Tools -> P: persist ToolResult(tc1) + metadata
+
+Tools -> P: record ToolCall(tc2=changes_near_window)
+Tools -> Dep: get_changes_near_window(service, env, window)
+Dep --> Tools: ToolResult(tc2)
+Tools -> P: persist ToolResult(tc2)
+
+Tools -> P: record ToolCall(tc3=sample_failures)
+Tools -> Tr: sample_failures(service, env, window)
+Tr --> Tools: ToolResult(tc3)
+Tools -> P: persist ToolResult(tc3)
+
+Tools -> P: record ToolCall(tc4=correlate_error_rate)
+Tools -> Met: correlate_error_rate(service, env, window)
+Met --> Tools: ToolResult(tc4)
+Tools -> P: persist ToolResult(tc4)
+
+Tools --> WF: tool_results summaries + evidence refs
+
+== Hypotheses + evidence-first response ==
+WF -> ORCH: hypotheses + evidence_refs
+ORCH -> ORCH: enforce evidence-first\n(each hypothesis cites tc1..tc4)
+ORCH -> Pres: build ResponseModel\n(primary_text + hypotheses + evidence + next_actions)
+Pres --> ORCH: ResponseModel(complete)
+
+== Persist & reply ==
+ORCH -> R: save hot state\n(slots, summary, workflow)
+ORCH -> P: persist state snapshot + response message
+ORCH -> API: return response
+API -> Web: render response w/ evidence
+Web -> U: Show hypotheses + citations + next actions
+
+@enduml

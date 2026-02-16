@@ -1,0 +1,51 @@
+@startuml
+' OpsMind — C4 Container Diagram (LLM App+ MVP)
+' Rendering: PlantUML with C4-PlantUML includes.
+' NOTE: Requires internet access for the include URLs OR vendor the C4-PlantUML library in your repo.
+
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!include C4P/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+title OpsMind (LLM App+) — Container Diagram (Portal-first, Cloud-portable)
+
+Person(sre, "SRE / Engineer", "Uses OpsMind to investigate incidents and perform RCA.")
+System_Boundary(opsmind, "OpsMind Platform") {
+
+  Container(web, "OpsMind Web Portal", "Web App (React/Vite or static)", "Chat UI, evidence rendering, follow-ups, conversation list.")
+  Container(api, "Chat API", "FastAPI", "AuthN, input validation, rate limiting, multi-tenant routing, exposes chat endpoints.")
+  Container(orchestrator, "Orchestrator", "Python (FastAPI module/service)", "Deterministic workflows, slot filling, tool planning/execution, evidence-first response building.")
+
+  ContainerDb(redis, "Redis", "Redis/ElastiCache", "Hot state cache: rolling summary, slots snapshot, workflow state, last N messages.")
+  ContainerDb(pg, "Postgres", "Postgres (Cloud SQL/RDS)", "Durable store: full transcript, tool ledger, feedback, audit metadata.")
+  ContainerDb(obj, "Object Store", "GCS/S3", "Raw tool outputs, artifacts, exports, large blobs.")
+
+  Container(toolsvc, "Tool Adapters", "Python modules (ports/adapters)", "Logs/Traces/Metrics/Deploy/Config adapters behind ToolRegistry interface.")
+  Container(model, "Model Provider", "Adapter (Mock/Vertex/Bedrock/OpenAI)", "LLM calls for classification / synthesis; must be replaceable.")
+}
+
+System_Ext(logs, "Log Platform", "Cloud Logging / Splunk / ELK / OpenSearch")
+System_Ext(metrics, "Metrics Platform", "Prometheus / Cloud Monitoring / Datadog")
+System_Ext(traces, "Trace Platform", "Jaeger / Tempo / Cloud Trace / X-Ray")
+System_Ext(ci, "CI/CD + Changes", "ArgoCD / GitHub Actions / Cloud Build / CodePipeline")
+System_Ext(cfg, "Config / Flags", "AppConfig / LaunchDarkly / Config Service")
+System_Ext(idp, "Identity Provider", "OIDC / SSO (Okta/AAD/Google)")
+
+Rel(sre, web, "Uses", "HTTPS")
+Rel(web, api, "Calls", "HTTPS/JSON")
+Rel(api, orchestrator, "Invokes turn()", "in-process or HTTP")
+Rel(api, idp, "AuthN", "OIDC")
+
+Rel(orchestrator, redis, "Get/Set hot ConversationState", "Redis protocol")
+Rel(orchestrator, pg, "Persist transcript + tool ledger", "SQL")
+Rel(orchestrator, obj, "Store/retrieve raw outputs & artifacts", "HTTPS")
+
+Rel(orchestrator, model, "Generate (classify/summarize/synthesize)", "HTTPS")
+Rel(orchestrator, toolsvc, "Execute tools via ToolRegistry", "in-process")
+Rel(toolsvc, logs, "Query logs", "API/SQL")
+Rel(toolsvc, metrics, "Query metrics", "API/PromQL")
+Rel(toolsvc, traces, "Query traces", "API")
+Rel(toolsvc, ci, "Query deploy/change events", "API")
+Rel(toolsvc, cfg, "Query config/flags", "API")
+
+@enduml
