@@ -4,7 +4,7 @@ sqlmodel==0.0.22
 # Use psycopg (v3) which `opsmind.storage` imports (psycopg, not psycopg2)
 psycopg==3.2.2
 # Redis client required for RedisPostgresStore
-redis==5.0.10
+redis==4.6.0
 pydantic==2.9.2
 python-jose==3.3.0
 requests==2.32.3
