@@ -27,7 +27,7 @@ All endpoints are prefixed with `/opsmind/{domain}/`:
 
 ## Note on Alternative Implementation
 
-There is also an alternative API implementation in `opsmind/apps/api/` which provides chat/orchestrator functionality with `/v1/chat/*` endpoints. That implementation is separate and uses a different architecture with orchestrator services.
+There is also an archived alternative API implementation in `archive/legacy-opsmind/apps/api/` which provides chat/orchestrator functionality with `/v1/chat/*` endpoints. That implementation is separate and uses a different architecture with orchestrator services.
 
 ## Enabling Postgres-backed conversation storage
 
