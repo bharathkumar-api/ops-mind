@@ -1,46 +1,40 @@
 @startuml
 ' OpsMind — C4 Component Diagram (Orchestrator internals)
-!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
-!include C4P/C4_Component.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 LAYOUT_LEFT_RIGHT()
 title OpsMind — Orchestrator Component Diagram (Developer-level)
 
 Container_Boundary(orchestrator, "Orchestrator Service") {
 
-  Component(turnHandler, "Turn Handler", "OrchestratorTurnService",
-    "Entry point per user message. Loads state, routes scenario, plans tools, updates state, returns ResponseModel.")
+  Component(turnHandler, "Turn Handler", "OrchestratorTurnService", "Entry point per user message. Loads state, routes scenario, plans tools, updates state, returns ResponseModel.")
 
-  Component(stateManager, "ConversationState Manager", "StateManager",
-    "Load/save ConversationState. Applies context overrides. Maintains rolling summary window.")
-  Component(slotFiller, "Slot Validator & Filler", "SlotEngine",
-    "Checks required slots by scenario; emits follow-up questions; updates open_questions.")
-  Component(router, "Scenario Classifier", "ScenarioRouter",
-    "Classifies into 500 spike / latency / regional outage / generic RCA (rules + optional LLM).")
+  Component(stateManager, "ConversationState Manager", "StateManager", "Load/save ConversationState. Applies context overrides. Maintains rolling summary window.")
+  
+  Component(slotFiller, "Slot Validator & Filler", "SlotEngine", "Checks required slots by scenario; emits follow-up questions; updates open_questions.")
+  
+  Component(router, "Scenario Classifier", "ScenarioRouter", "Classifies into 500 spike / latency / regional outage / generic RCA (rules + optional LLM).")
 
-  Component(workflow, "Workflow Engine", "DeterministicWorkflowEngine",
-    "Implements bounded state machine per scenario: scope→plan→gather→hypothesize→respond.")
-  Component(planner, "Tool Planner", "ToolPlanner",
-    "Builds ordered tool plan from ScenarioWorkflowSpec with budgets (max calls/runtime).")
-  Component(toolRegistry, "Tool Registry", "ToolRegistry",
-    "Executes tools through adapters; writes ToolCall ledger; returns ToolResult summaries.")
-  Component(evidence, "Evidence Enforcer", "EvidencePolicy",
-    "Validates evidence-first: each hypothesis must cite ToolResult/Artifact; degrades to 'needs_info' if insufficient.")
-  Component(hypothesis, "Hypothesis Builder", "HypothesisEngine",
-    "Turns tool results into 1–3 hypotheses w/ confidence and evidence refs; maintains hypothesis lifecycle.")
-  Component(presenter, "Presenter", "ResponsePresenter",
-    "Builds ResponseModel for UI/Slack/Teams renderers (primary_text, hypotheses, evidence, next_actions, followups).")
+  Component(workflow, "Workflow Engine", "DeterministicWorkflowEngine", "Implements bounded state machine per scenario: scope->plan->gather->hypothesize->respond.")
+  
+  Component(planner, "Tool Planner", "ToolPlanner", "Builds ordered tool plan from ScenarioWorkflowSpec with budgets (max calls/runtime).")
+  
+  Component(toolRegistry, "Tool Registry", "ToolRegistry", "Executes tools through adapters; writes ToolCall ledger; returns ToolResult summaries.")
+  
+  Component(evidence, "Evidence Enforcer", "EvidencePolicy", "Validates evidence-first: each hypothesis must cite ToolResult/Artifact; degrades to 'needs_info' if insufficient.")
+  
+  Component(hypothesis, "Hypothesis Builder", "HypothesisEngine", "Turns tool results into 1-3 hypotheses w/ confidence and evidence refs; maintains hypothesis lifecycle.")
+  
+  Component(presenter, "Presenter", "ResponsePresenter", "Builds ResponseModel for UI/Slack/Teams renderers (primary_text, hypotheses, evidence, next_actions, followups).")
 
-  Component(modelProvider, "Model Provider Adapter", "ModelProvider",
-    "LLM abstraction. Implementations: Mock, Vertex, Bedrock, OpenAI.")
+  Component(modelProvider, "Model Provider Adapter", "ModelProvider", "LLM abstraction. Implementations: Mock, Vertex, Bedrock, OpenAI.")
 }
 
-ContainerDb(redis, "Redis", "Hot cache",
-  "Rolling summary, slots snapshot, workflow state, last N messages (TTL).")
-ContainerDb(pg, "Postgres", "Durable store",
-  "Full transcript, tool ledger, feedback, audit metadata.")
-ContainerDb(obj, "Object Store", "GCS/S3",
-  "Raw tool outputs, artifacts, exports.")
+ContainerDb(redis, "Redis", "Hot cache", "Rolling summary, slots snapshot, workflow state, last N messages (TTL).")
+
+ContainerDb(pg, "Postgres", "Durable store", "Full transcript, tool ledger, feedback, audit metadata.")
+
+ContainerDb(obj, "Object Store", "GCS/S3", "Raw tool outputs, artifacts, exports.")
 
 System_Ext(logs, "Logs backend", "Cloud Logging/Splunk/ELK")
 System_Ext(metrics, "Metrics backend", "Prometheus/Cloud Monitoring/Datadog")

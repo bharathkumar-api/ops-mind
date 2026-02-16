@@ -1,51 +1,49 @@
 @startuml
 ' OpsMind — C4 Component Diagram (Tooling Layer)
 ' Focus: ToolRegistry internals + adapters + authz + result storage
-!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
-!include C4P/C4_Component.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 LAYOUT_LEFT_RIGHT()
 title OpsMind — Tooling Layer Component Diagram (Developer-level)
 
 Container_Boundary(tooling, "Tooling Layer (ToolRegistry + Adapters)") {
 
-  Component(toolRegistry, "Tool Registry", "ToolRegistry",
-    "Single entry point for tool execution. Enforces contracts, records ToolCall ledger, dispatches to adapters, normalizes ToolResult.")
+  Component(toolRegistry, "Tool Registry", "ToolRegistry", "Single entry point for tool execution. Enforces contracts, records ToolCall ledger, dispatches to adapters, normalizes ToolResult.")
 
-  Component(toolCatalog, "Tool Catalog", "ToolCatalog",
-    "Lists available tools, schemas, required permissions, rate limits, and input validators.")
-  Component(inputValidator, "Input Validator", "ToolInputValidator",
-    "Validates tool input against schema; sanitizes values; enforces max sizes and allowlists.")
-  Component(authzGate, "AuthZ Gate", "ToolAuthZGate",
-    "Calls RBAC/ABAC policy engine to allow/deny tool execution per subject/tenant/resource.")
-  Component(rateLimiter, "Rate Limiter", "ToolRateLimiter",
-    "Per-tenant and per-user tool rate limiting; prevents abuse and runaway loops.")
-  Component(executor, "Executor", "ToolExecutor",
-    "Executes tool calls synchronously; supports timeouts, retries, and circuit breakers.")
-  Component(normalizer, "Result Normalizer", "ToolResultNormalizer",
-    "Converts adapter-specific outputs into ToolResult(summary + artifacts + raw_ref).")
-  Component(rawStore, "Raw Output Store", "ToolRawOutputStore",
-    "Stores large raw outputs (rows, trace json, blobs) to Object Store or DB; returns raw_ref.")
-  Component(ledger, "Tool Ledger Writer", "ToolLedgerWriter",
-    "Writes ToolCall + ToolResult metadata to durable store for audit/replay.")
+  Component(toolCatalog, "Tool Catalog", "ToolCatalog", "Lists available tools, schemas, required permissions, rate limits, and input validators.")
+  
+  Component(inputValidator, "Input Validator", "ToolInputValidator", "Validates tool input against schema; sanitizes values; enforces max sizes and allowlists.")
+  
+  Component(authzGate, "AuthZ Gate", "ToolAuthZGate", "Calls RBAC/ABAC policy engine to allow/deny tool execution per subject/tenant/resource.")
+  
+  Component(rateLimiter, "Rate Limiter", "ToolRateLimiter", "Per-tenant and per-user tool rate limiting; prevents abuse and runaway loops.")
+  
+  Component(executor, "Executor", "ToolExecutor", "Executes tool calls synchronously; supports timeouts, retries, and circuit breakers.")
+  
+  Component(normalizer, "Result Normalizer", "ToolResultNormalizer", "Converts adapter-specific outputs into ToolResult(summary + artifacts + raw_ref).")
+  
+  Component(rawStore, "Raw Output Store", "ToolRawOutputStore", "Stores large raw outputs (rows, trace json, blobs) to Object Store or DB; returns raw_ref.")
+  
+  Component(ledger, "Tool Ledger Writer", "ToolLedgerWriter", "Writes ToolCall + ToolResult metadata to durable store for audit/replay.")
 
-  Component(adapterLogs, "Logs Adapter", "LogsAdapter",
-    "Tools: logs.query_error_breakdown, logs.query_timeouts_retries, logs.compare_regions")
-  Component(adapterMetrics, "Metrics Adapter", "MetricsAdapter",
-    "Tools: metrics.latency_by_endpoint, metrics.correlate_error_rate, metrics.compare_regions")
-  Component(adapterTraces, "Traces Adapter", "TracesAdapter",
-    "Tools: traces.sample_failures, traces.sample_slow, traces.compare_regions")
-  Component(adapterDeploy, "Deploy/Config Adapter", "DeployConfigAdapter",
-    "Tools: deploy.get_changes_near_window, deploy.compare_region_rollouts, config.get_recent_changes")
+  Component(adapterLogs, "Logs Adapter", "LogsAdapter", "Tools: logs.query_error_breakdown, logs.query_timeouts_retries, logs.compare_regions")
+  
+  Component(adapterMetrics, "Metrics Adapter", "MetricsAdapter", "Tools: metrics.latency_by_endpoint, metrics.correlate_error_rate, metrics.compare_regions")
+  
+  Component(adapterTraces, "Traces Adapter", "TracesAdapter", "Tools: traces.sample_failures, traces.sample_slow, traces.compare_regions")
+  
+  Component(adapterDeploy, "Deploy/Config Adapter", "DeployConfigAdapter", "Tools: deploy.get_changes_near_window, deploy.compare_region_rollouts, config.get_recent_changes")
 
-  Component(errorMapper, "Error Mapper", "ToolErrorMapper",
-    "Maps adapter errors to standard error types; classifies retryable vs non-retryable; emits safe messages.")
+  Component(errorMapper, "Error Mapper", "ToolErrorMapper", "Maps adapter errors to standard error types; classifies retryable vs non-retryable; emits safe messages.")
 }
 
 ' ---- External dependencies / data stores ----
 System_Ext(policy, "Policy Engine (RBAC/ABAC)", "AxonAuth/Casbin or equivalent")
+
 ContainerDb(pg, "Postgres", "Durable store", "ToolCall ledger + ToolResult metadata + transcript references.")
+
 ContainerDb(obj, "Object Store", "GCS/S3", "Raw tool outputs & artifacts (large blobs).")
+
 ContainerDb(redis, "Redis", "Hot cache", "Optional: recent tool results / short-lived caches (TTL).")
 
 System_Ext(logsBackend, "Logs Platform", "Cloud Logging / Splunk / ELK / OpenSearch")
